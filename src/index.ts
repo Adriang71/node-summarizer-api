@@ -9,11 +9,15 @@ import { Article } from './entities/Article';
 import { Tag } from './entities/Tag';
 import { SavedArticle } from './entities/SavedArticle';
 import { ArticleTag } from './entities/ArticleTag';
+import { UserSource } from './entities/UserSource';
+import { ScheduledSummary } from './entities/ScheduledSummary';
 import authRoutes from './routes/auth';
 import articleRoutes from './routes/articles';
 import tagRoutes from './routes/tags';
+import newsRoutes from './routes/news';
 import { authMiddleware } from './middleware/auth';
 import { swaggerSpec } from './config/swagger';
+import { CronService } from './services/cron.service';
 
 dotenv.config();
 
@@ -36,7 +40,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE,
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  entities: [User, Article, Tag, SavedArticle, ArticleTag],
+  entities: [User, Article, Tag, SavedArticle, ArticleTag, UserSource, ScheduledSummary],
   migrations: [],
   subscribers: [],
 });
@@ -45,11 +49,16 @@ export const AppDataSource = new DataSource({
 app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/news', newsRoutes);
 
 // Initialize database and start server
 AppDataSource.initialize()
   .then(() => {
     console.log('Database connection established');
+    
+    // Initialize CRON jobs
+    new CronService();
+    
     const port = process.env.PORT || 3000;
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);

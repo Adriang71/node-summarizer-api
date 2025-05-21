@@ -1,5 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { SavedArticle } from './SavedArticle';
+import { UserSource } from './UserSource';
+import { ScheduledSummary } from './ScheduledSummary';
 
 @Entity()
 export class User {
@@ -13,5 +15,11 @@ export class User {
   password_hash: string;
 
   @OneToMany(() => SavedArticle, savedArticle => savedArticle.user)
-  savedArticles: SavedArticle[];
+  saved_articles: SavedArticle[];
+
+  @OneToMany(() => UserSource, source => source.user)
+  sources: UserSource[];
+
+  @OneToMany(() => ScheduledSummary, summary => summary.user)
+  scheduled_summaries: ScheduledSummary[];
 } 
