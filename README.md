@@ -1,7 +1,7 @@
 # AI-Powered Article Summarizer & Sentiment Analyzer API
 
 ## Description
-This API provides functionality for analyzing articles, generating summaries, and analyzing sentiment using OpenAI's GPT models.
+This API provides functionality for analyzing articles, generating summaries, and analyzing sentiment using OpenRouter.ai's AI models.
 
 ## Features
 - Article analysis and summarization
@@ -17,7 +17,7 @@ This API provides functionality for analyzing articles, generating summaries, an
 - Express.js
 - TypeORM
 - PostgreSQL
-- OpenAI API
+- OpenRouter.ai API
 - JWT Authentication
 - Swagger/OpenAPI
 
@@ -25,7 +25,7 @@ This API provides functionality for analyzing articles, generating summaries, an
 - Node.js (v20 or higher)
 - PostgreSQL
 - Docker and Docker Compose (for containerized setup)
-- OpenAI API key
+- OpenRouter.ai API key
 
 ## Installation
 
@@ -40,7 +40,7 @@ cd node-summarizer-api
 ```bash
 cp .env.example .env
 ```
-Edit `.env` file and set your OpenAI API key.
+Edit `.env` file and set your OpenRouter API key.
 
 3. Build and start containers:
 ```bash
@@ -85,7 +85,8 @@ The API documentation is available at `/api-docs` when the server is running.
 - `DB_PASSWORD`: Database password
 - `DB_DATABASE`: Database name
 - `JWT_SECRET`: Secret key for JWT
-- `OPENAI_API_KEY`: OpenAI API key
+- `OPENROUTER_API_KEY`: OpenRouter.ai API key
+- `APP_URL`: Your application URL (used for OpenRouter API)
 
 ## License
 MIT 

@@ -23,12 +23,23 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Basic CORS configuration
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.json({ message: 'API is working' });
+});
+
 // Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec));
 
 // Database configuration
 export const AppDataSource = new DataSource({
@@ -59,8 +70,8 @@ AppDataSource.initialize()
     // Initialize CRON jobs
     new CronService();
     
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
+    const port = parseInt(process.env.PORT || '3000');
+    app.listen(port, '0.0.0.0', () => {
       console.log(`Server is running on port ${port}`);
       console.log(`Swagger documentation available at http://localhost:${port}/api-docs`);
     });

@@ -3,13 +3,42 @@ import { AppDataSource } from '../index';
 import { Article } from '../entities/Article';
 import { Tag } from '../entities/Tag';
 import { SavedArticle } from '../entities/SavedArticle';
-import { OpenAIService } from '../services/openai.service';
+import { OpenRouterService } from '../services/openrouter.service';
 import { IOpenAIService } from '../interfaces/openai.interface';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
-const articleRepository = AppDataSource.getRepository(Article);
-const tagRepository = AppDataSource.getRepository(Tag);
-const savedArticleRepository = AppDataSource.getRepository(SavedArticle);
-const openAIService: IOpenAIService = new OpenAIService();
+const getArticleRepository = () => AppDataSource.getRepository(Article);
+const getTagRepository = () => AppDataSource.getRepository(Tag);
+const getSavedArticleRepository = () => AppDataSource.getRepository(SavedArticle);
+const aiService: IOpenAIService = new OpenRouterService();
+
+async function extractContentFromUrl(url: string): Promise<string> {
+  try {
+    const response = await axios.get(url);
+    const $ = cheerio.load(response.data);
+    
+    // Usuń niepotrzebne elementy
+    $('script, style, nav, footer, header, aside, .ads, .comments, .social-share').remove();
+    
+    // Pobierz tytuł
+    const title = $('title').text().trim();
+    
+    // Pobierz główną treść
+    const mainContent = $('article, .article, .post, .content, main, .main')
+      .text()
+      .trim()
+      .replace(/\s+/g, ' ');
+    
+    // Jeśli nie znaleziono głównej treści, pobierz cały tekst z body
+    const content = mainContent || $('body').text().trim().replace(/\s+/g, ' ');
+    
+    return `Title: ${title}\n\nContent: ${content}`;
+  } catch (error) {
+    console.error('Error extracting content from URL:', error);
+    throw new Error('Failed to extract content from URL');
+  }
+}
 
 /**
  * @swagger
@@ -31,7 +60,7 @@ const openAIService: IOpenAIService = new OpenAIService();
  *                 description: URL of the article to analyze
  *               content:
  *                 type: string
- *                 description: Content of the article to analyze
+ *                 description: Content of the article to analyze (optional if URL is provided)
  *               tags:
  *                 type: array
  *                 items:
@@ -50,19 +79,37 @@ const openAIService: IOpenAIService = new OpenAIService();
 export const analyzeArticle = async (req: Request, res: Response) => {
   try {
     const { url, content, tags } = req.body;
+    const articleRepository = getArticleRepository();
+    const tagRepository = getTagRepository();
 
-    // TODO: Implement URL content extraction
-    const articleContent = content || '';
+    let articleContent = content;
+    let articleTitle = 'Untitled';
 
-    // Generate summary and analyze sentiment using OpenAI service
+    if (url) {
+      try {
+        const extractedContent = await extractContentFromUrl(url);
+        const [title, ...contentParts] = extractedContent.split('\n\n');
+        articleTitle = title.replace('Title: ', '');
+        articleContent = contentParts.join('\n\n').replace('Content: ', '');
+      } catch (error) {
+        console.error('Error extracting content from URL:', error);
+        return res.status(400).json({ message: 'Failed to extract content from URL' });
+      }
+    }
+
+    if (!articleContent) {
+      return res.status(400).json({ message: 'No content provided and could not extract from URL' });
+    }
+
+    // Generate summary and analyze sentiment using AI service
     const [summary, sentiment] = await Promise.all([
-      openAIService.generateSummary(articleContent),
-      openAIService.analyzeSentiment(articleContent)
+      aiService.generateSummary(articleContent),
+      aiService.analyzeSentiment(articleContent)
     ]);
 
     // Create article
     const article = articleRepository.create({
-      title: url || 'Untitled',
+      title: articleTitle,
       content: articleContent,
       summary,
       sentiment,
@@ -123,6 +170,7 @@ export const analyzeArticle = async (req: Request, res: Response) => {
 export const getArticleSummary = async (req: Request, res: Response) => {
   try {
     const { articleId } = req.params;
+    const articleRepository = getArticleRepository();
 
     const article = await articleRepository.findOne({ where: { id: articleId } });
     if (!article) {
@@ -162,6 +210,7 @@ export const saveArticle = async (req: Request, res: Response) => {
   try {
     const { articleId } = req.params;
     const userId = (req as any).user.id;
+    const savedArticleRepository = getSavedArticleRepository();
 
     const existingSaved = await savedArticleRepository.findOne({
       where: {
@@ -209,13 +258,14 @@ export const saveArticle = async (req: Request, res: Response) => {
 export const getSavedArticles = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
+    const savedArticleRepository = getSavedArticleRepository();
 
     const savedArticles = await savedArticleRepository.find({
       where: { user: { id: userId } },
       relations: ['article', 'article.tags']
     });
 
-    res.json(savedArticles.map(sa => sa.article));
+    res.json(savedArticles.map(saved => saved.article));
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving saved articles' });
   }

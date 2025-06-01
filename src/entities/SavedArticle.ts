@@ -7,7 +7,7 @@ export class SavedArticle {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, user => user.savedArticles)
+  @ManyToOne(() => User, user => user.saved_articles)
   @JoinColumn({ name: 'user_id' })
   user: User;
 

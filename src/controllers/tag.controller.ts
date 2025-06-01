@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AppDataSource } from '../index';
 import { Tag } from '../entities/Tag';
 
-const tagRepository = AppDataSource.getRepository(Tag);
+const getTagRepository = () => AppDataSource.getRepository(Tag);
 
 /**
  * @swagger
@@ -24,6 +24,7 @@ const tagRepository = AppDataSource.getRepository(Tag);
  */
 export const getPopularTags = async (req: Request, res: Response) => {
   try {
+    const tagRepository = getTagRepository();
     const tags = await tagRepository
       .createQueryBuilder('tag')
       .leftJoinAndSelect('tag.articles', 'article')
@@ -75,6 +76,7 @@ export const getPopularTags = async (req: Request, res: Response) => {
 export const createTag = async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
+    const tagRepository = getTagRepository();
 
     const existingTag = await tagRepository.findOne({ where: { name } });
     if (existingTag) {
@@ -110,6 +112,7 @@ export const createTag = async (req: Request, res: Response) => {
  */
 export const getTags = async (req: Request, res: Response) => {
   try {
+    const tagRepository = getTagRepository();
     const tags = await tagRepository.find();
     res.json(tags);
   } catch (error) {
@@ -143,6 +146,7 @@ export const getTags = async (req: Request, res: Response) => {
 export const deleteTag = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const tagRepository = getTagRepository();
 
     const tag = await tagRepository.findOne({ where: { id } });
     if (!tag) {

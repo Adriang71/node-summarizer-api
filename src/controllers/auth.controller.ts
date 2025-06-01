@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../index';
 import { User } from '../entities/User';
 
-const userRepository = AppDataSource.getRepository(User);
+const getUserRepository = () => AppDataSource.getRepository(User);
 
 /**
  * @swagger
@@ -46,6 +46,7 @@ const userRepository = AppDataSource.getRepository(User);
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    const userRepository = getUserRepository();
 
     const existingUser = await userRepository.findOne({ where: { email } });
     if (existingUser) {
@@ -112,6 +113,7 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    const userRepository = getUserRepository();
 
     const user = await userRepository.findOne({ where: { email } });
     if (!user) {

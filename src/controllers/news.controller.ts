@@ -102,7 +102,7 @@ export const deleteSource = async (req: Request, res: Response) => {
 
     await newsService.deleteUserSource(userId, id);
     res.json({ message: 'Source deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     if (error.message === 'Source not found') {
       return res.status(404).json({ message: 'Source not found' });
     }

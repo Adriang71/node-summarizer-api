@@ -1,25 +1,28 @@
 import Parser from 'rss-parser';
-import { OpenAIService } from './openai.service';
+import { OpenRouterService } from './openrouter.service';
 import { AppDataSource } from '../index';
 import { UserSource } from '../entities/UserSource';
 import { ScheduledSummary } from '../entities/ScheduledSummary';
 import { User } from '../entities/User';
 
 const parser = new Parser();
-const openAIService = new OpenAIService();
+const aiService = new OpenRouterService();
 
 export class NewsService {
-  private userSourceRepository = AppDataSource.getRepository(UserSource);
-  private scheduledSummaryRepository = AppDataSource.getRepository(ScheduledSummary);
-  private userRepository = AppDataSource.getRepository(User);
+  private getUserSourceRepository = () => AppDataSource.getRepository(UserSource);
+  private getScheduledSummaryRepository = () => AppDataSource.getRepository(ScheduledSummary);
+  private getUserRepository = () => AppDataSource.getRepository(User);
 
   async addUserSource(userId: string, sourceUrl: string, sourceName: string, sourceType: string): Promise<UserSource> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const userRepository = this.getUserRepository();
+    const userSourceRepository = this.getUserSourceRepository();
+    
+    const user = await userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new Error('User not found');
     }
 
-    const source = this.userSourceRepository.create({
+    const source = userSourceRepository.create({
       user,
       source_url: sourceUrl,
       source_name: sourceName,
@@ -27,17 +30,19 @@ export class NewsService {
       enabled: true
     });
 
-    return await this.userSourceRepository.save(source);
+    return await userSourceRepository.save(source);
   }
 
   async getUserSources(userId: string): Promise<UserSource[]> {
-    return await this.userSourceRepository.find({
+    const userSourceRepository = this.getUserSourceRepository();
+    return await userSourceRepository.find({
       where: { user: { id: userId } }
     });
   }
 
   async deleteUserSource(userId: string, sourceId: string): Promise<void> {
-    const source = await this.userSourceRepository.findOne({
+    const userSourceRepository = this.getUserSourceRepository();
+    const source = await userSourceRepository.findOne({
       where: { id: sourceId, user: { id: userId } }
     });
 
@@ -45,11 +50,12 @@ export class NewsService {
       throw new Error('Source not found');
     }
 
-    await this.userSourceRepository.remove(source);
+    await userSourceRepository.remove(source);
   }
 
   async fetchAndProcessNews(): Promise<void> {
-    const users = await this.userRepository.find({
+    const userRepository = this.getUserRepository();
+    const users = await userRepository.find({
       relations: ['sources']
     });
 
@@ -85,11 +91,11 @@ export class NewsService {
   private async processArticle(user: User, article: any, sourceName: string): Promise<void> {
     try {
       const [summary, sentiment] = await Promise.all([
-        openAIService.generateSummary(article.content),
-        openAIService.analyzeSentiment(article.content)
+        aiService.generateSummary(article.content),
+        aiService.analyzeSentiment(article.content)
       ]);
 
-      const scheduledSummary = this.scheduledSummaryRepository.create({
+      const scheduledSummary = this.getScheduledSummaryRepository().create({
         user,
         article_title: article.title,
         article_url: article.url,
@@ -98,14 +104,15 @@ export class NewsService {
         source_name: sourceName
       });
 
-      await this.scheduledSummaryRepository.save(scheduledSummary);
+      await this.getScheduledSummaryRepository().save(scheduledSummary);
     } catch (error) {
       console.error(`Error processing article ${article.url}:`, error);
     }
   }
 
   async getUserSummaries(userId: string): Promise<ScheduledSummary[]> {
-    return await this.scheduledSummaryRepository.find({
+    const scheduledSummaryRepository = this.getScheduledSummaryRepository();
+    return await scheduledSummaryRepository.find({
       where: { user: { id: userId } },
       order: { created_at: 'DESC' }
     });
