@@ -14,10 +14,8 @@ import { ScheduledSummary } from './entities/ScheduledSummary';
 import authRoutes from './routes/auth';
 import articleRoutes from './routes/articles';
 import tagRoutes from './routes/tags';
-import newsRoutes from './routes/news';
 import { authMiddleware } from './middleware/auth';
 import { swaggerSpec } from './config/swagger';
-import { CronService } from './services/cron.service';
 
 dotenv.config();
 
@@ -60,15 +58,11 @@ export const AppDataSource = new DataSource({
 app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/tags', tagRoutes);
-app.use('/api/news', newsRoutes);
 
 // Initialize database and start server
 AppDataSource.initialize()
   .then(() => {
     console.log('Database connection established');
-    
-    // Initialize CRON jobs
-    new CronService();
     
     const port = parseInt(process.env.PORT || '3000');
     app.listen(port, '0.0.0.0', () => {
